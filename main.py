@@ -1,40 +1,37 @@
 import customtkinter as ctk
 import json
 import os
+import sys
 
-# Налаштування вигляду програми
-ctk.set_appearance_mode("System")  # Підлаштовується під тему ОС (Dark/Light)
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
+ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 
 class CostCalculator(ctk.CTk):
     def __init__(self):
-
-        class CostCalculator(ctk.CTk):
-            def __init__(self):
-                super().__init__()
-                self.title("Калькулятор 3D Друку")
-                self.geometry("900x650")
-                self.minsize(800, 600)
-
-                # ДОДАЙ ОСЬ ЦЕЙ РЯДОК:
-                self.iconbitmap("icon.ico")
-
         super().__init__()
         self.title("Калькулятор 3D Друку")
         self.geometry("900x650")
         self.minsize(800, 600)
 
-        # Файл для збереження історії
+        self.iconbitmap(resource_path("icon.ico"))
+
         self.history_file = "print_history.json"
         self.history_data = self.load_history()
 
-        # --- Розмітка вікна ---
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # ==================== ЛІВА ЧАСТИНА (Ввід даних) ====================
         self.input_frame = ctk.CTkFrame(self)
         self.input_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
@@ -64,7 +61,7 @@ class CostCalculator(ctk.CTk):
 
         self.power_entry = ctk.CTkEntry(self.input_frame, placeholder_text="Споживання принтера (кВт)", width=300)
         self.power_entry.pack(pady=5, padx=20)
-        self.power_entry.insert(0, "0.08")  # За замовчуванням 80 Вт
+        self.power_entry.insert(0, "0.08")
 
         self.markup_entry = ctk.CTkEntry(self.input_frame, placeholder_text="Націнка (%)", width=300)
         self.markup_entry.pack(pady=5, padx=20)
@@ -77,7 +74,6 @@ class CostCalculator(ctk.CTk):
                                          text_color="#2FA572")
         self.result_label.pack(pady=5)
 
-        # ==================== ПРАВА ЧАСТИНА (Історія) ====================
         self.history_frame = ctk.CTkFrame(self)
         self.history_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
@@ -90,7 +86,6 @@ class CostCalculator(ctk.CTk):
         self.render_history()
 
     def load_history(self):
-        """Завантажує історію з файлу."""
         if os.path.exists(self.history_file):
             try:
                 with open(self.history_file, "r", encoding="utf-8") as f:
@@ -100,14 +95,11 @@ class CostCalculator(ctk.CTk):
         return []
 
     def save_history(self):
-        """Зберігає історію у файл."""
         with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump(self.history_data, f, ensure_ascii=False, indent=4)
 
     def calculate(self):
-        """Головна логіка підрахунку."""
         try:
-            # Зчитуємо дані, замінюємо кому на крапку для захисту від помилок вводу
             name = self.name_entry.get() or "Без назви"
             weight = float(self.weight_entry.get().replace(',', '.'))
             time_hrs = float(self.time_entry.get().replace(',', '.'))
@@ -117,8 +109,7 @@ class CostCalculator(ctk.CTk):
             power = float(self.power_entry.get().replace(',', '.'))
             markup = float(self.markup_entry.get().replace(',', '.'))
 
-            # Формули
-            price_per_gram = spool_price / 1000  # Припускаємо стандартну котушку 1 кг
+            price_per_gram = spool_price / 1000
             material_cost = weight * price_per_gram
             time_cost = time_hrs * hour_price
             electricity_cost = time_hrs * power * kwh_price
@@ -126,12 +117,10 @@ class CostCalculator(ctk.CTk):
             base_cost = material_cost + time_cost + electricity_cost
             final_price = base_cost + (base_cost * markup / 100)
 
-            # Вивід результату
             result_text = (f"Собівартість: {base_cost:.2f} грн\n"
                            f"Ціна для продажу: {final_price:.2f} грн")
             self.result_label.configure(text=result_text)
 
-            # Додаємо в історію
             entry = {
                 "name": name,
                 "weight": weight,
@@ -148,14 +137,10 @@ class CostCalculator(ctk.CTk):
             self.result_label.configure(text="Помилка: перевірте, чи скрізь введені числа!", text_color="red")
 
     def render_history(self):
-        """Оновлює список історії в інтерфейсі."""
-        # Очищаємо поточні віджети
         for widget in self.scrollable_history.winfo_children():
             widget.destroy()
 
-        # Виводимо історію (нові зверху)
         for i, item in enumerate(reversed(self.history_data)):
-            # Оскільки ми перевертаємо список, треба правильно вирахувати оригінальний індекс для видалення
             original_idx = len(self.history_data) - 1 - i
 
             frame = ctk.CTkFrame(self.scrollable_history, fg_color=("gray85", "gray20"))
@@ -172,7 +157,6 @@ class CostCalculator(ctk.CTk):
             del_btn.pack(side="right", padx=15)
 
     def delete_entry(self, idx):
-        """Видаляє запис з історії."""
         del self.history_data[idx]
         self.save_history()
         self.render_history()
